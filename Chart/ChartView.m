@@ -13,6 +13,10 @@ static NSString *topTitles[] = {@"风险", @"适宜", @"偏贵"};
 static NSString *bottomTitles[] = {@"最低报价", @"厂商指导报价", @"最高报价"};
 
 @interface ChartView()
+{
+    float width;
+    float height;
+}
 
 @property (nonatomic, retain) UIColor *lineColor;
 @property (nonatomic, retain) UIColor *axisColor;
@@ -62,6 +66,9 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导报价", @"最
     
     self.topTextFont = [UIFont systemFontOfSize:12];
     self.bottomTextFont = [UIFont systemFontOfSize:11];
+    
+    width = self.frame.size.width;
+    height = self.frame.size.height;
 }
 
 - (void)dealloc {
@@ -78,24 +85,171 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导报价", @"最
 }
 
 
-- (void)drawRect:(CGRect)rect
-{
-    float width = rect.size.width;
-    float height = rect.size.height;
+- (void)drawRect:(CGRect)rect {
     
     CGRect bottomRects[3] = {{0,height-32.5,105,32}, {107.5,height-32.5,105,32}, {215,height-32.5,105,32}};
+    CGRect refRect = CGRectInset(self.bounds, width/2.9, height/2.7);
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    [self drawBackImage];
+    
+    [self drawTopText];
+    
+    [self drawBottomTextAndRects:context rects:bottomRects];
+    
+    [self drawRef:context rect:refRect];
+    
+    [self drawAxisAndPointLines:context bottomRects:bottomRects refRect:refRect];
+}
+
+/**
+ *  绘制背景图片
+ */
+- (void)drawBackImage {
+    if (!self.data.image) return;
+    
+    [self.data.image drawInRect:self.bounds];
+}
+
+/**
+ *  绘制上方文字
+ */
+- (void)drawTopText {
+    
+    //add top title text
+    [self.lineColor set];
+    for (int i = 0; i < 3; i++) {
+        NSString *title = topTitles[i];
+        CGRect rect = CGRectMake(0, 5, width/3., 10);
+        rect.origin.x = width/3. * i;
+        
+        [title drawInRect:rect
+                 withFont:[UIFont boldSystemFontOfSize:self.topTextFont.pointSize]
+            lineBreakMode:NSLineBreakByWordWrapping
+                alignment:NSTextAlignmentCenter];
+    }
+    //add top text
+    [self.lineColor set];
+    for (int i = 0; i < self.data.topDescriptions.count; i++) {
+        if (i >= 3) break;
+        
+        NSString *topText = self.data.topDescriptions[i];
+        CGRect rect = CGRectMake(0, 20, width/3., 10);
+        rect.origin.x = width/3. * i;
+        
+        [topText drawInRect:rect
+                   withFont:self.topTextFont
+              lineBreakMode:NSLineBreakByWordWrapping
+                  alignment:NSTextAlignmentCenter];
+    }
+}
+
+/**
+ *  绘制下方方框内的文字
+ *
+ *  @param context     context
+ *  @param bottomRects 下方方框数组
+ */
+- (void)drawBottomTextAndRects:(CGContextRef)context rects:(const CGRect *)bottomRects {
+    
+    //add bottom rects -> 3
+    CGContextSetLineWidth(context, kLineWidth);
+    CGContextSetStrokeColorWithColor(context, self.lineColor.CGColor);
+    CGContextAddRects(context, bottomRects, 3);
+    CGContextStrokePath(context);
+    
+    //draw bottom title text
+    [[UIColor blackColor] set];
+    for (int i = 0; i < 3; i++) {
+        NSString *title = bottomTitles[i];
+        CGRect rect = bottomRects[i];
+        rect.size.height /= 2.0f;
+        
+        [title drawInRect:rect
+                 withFont:[UIFont boldSystemFontOfSize:self.bottomTextFont.pointSize]
+            lineBreakMode:NSLineBreakByWordWrapping
+                alignment:NSTextAlignmentCenter];
+    }
+    //add bottom text
+    [[UIColor blackColor] set];
+    for (int i = 0; i < self.data.bottomDescriptions.count; i++) {
+        if (i >= 3) break;
+        
+        NSString *bottomText = self.data.bottomDescriptions[i];
+        CGRect rect = bottomRects[i];
+        rect.size.height /= 2;
+        rect.origin.y += rect.size.height;
+        
+        [bottomText drawInRect:rect
+                      withFont:self.bottomTextFont
+                 lineBreakMode:NSLineBreakByWordWrapping
+                     alignment:NSTextAlignmentCenter];
+    }
+}
+
+/**
+ *  绘制参考成交价方框及文字
+ *
+ *  @param context context
+ *  @param refRect 绘制位置
+ */
+- (void)drawRef:(CGContextRef)context rect:(const CGRect)refRect {
+    //add ref rect
+    CGContextSetLineWidth(context, kLineWidth);
+    CGContextSetStrokeColorWithColor(context, self.refPointColor.CGColor);
+    CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+    CGContextAddRect(context, refRect);
+    CGContextDrawPath(context, kCGPathFillStroke);
+    
+    CGRect headRect = refRect;
+    headRect.size.height *= 2./5.;
+    CGContextSetFillColorWithColor(context, self.refPointColor.CGColor);
+    CGContextAddRect(context, headRect);
+    CGContextDrawPath(context, kCGPathFillStroke);
+    
+    [[UIColor whiteColor] set];
+    NSString *refTitle = @"参考成交价";
+    [refTitle drawInRect:headRect withFont:[UIFont boldSystemFontOfSize:14]
+           lineBreakMode:NSLineBreakByWordWrapping
+               alignment:NSTextAlignmentCenter];
+    
+    //add ref text
+    if (self.data.referencePrice) {
+        [[UIColor blackColor] set];
+        CGRect refTextRect = refRect;
+        refTextRect.size.height *= 3./5.;
+        refTextRect.origin.y += refRect.size.height /5. * 2.;
+        [self.data.referencePrice drawInRect:refTextRect
+                                    withFont:[UIFont boldSystemFontOfSize:14]
+                               lineBreakMode:NSLineBreakByWordWrapping
+                                   alignment:NSTextAlignmentCenter];
+    }
+}
+
+/**
+ *  回执坐标轴、轴上圆点、点到框的连线
+ *
+ *  @param context     context
+ *  @param bottomRects 下方方框数组
+ *  @param refRect     参考成加价方框位置
+ */
+- (void)drawAxisAndPointLines:(CGContextRef)context
+                  bottomRects:(const CGRect *)bottomRects
+                      refRect:(const CGRect)refRect {
+        
     float minX          = width * self.data.minPricePercent;
     float maxX          = width * self.data.maxPricePercent;
     float referenceX    = width * self.data.referencePricePercent;
     float guideX        = width * self.data.guidePricePercent;
     
+    //add x axis
+    CGContextSetLineWidth(context, 2);
+    CGContextSetStrokeColorWithColor(context, self.axisColor.CGColor);
+    CGContextMoveToPoint(context, 0, 134);
+    CGContextAddLineToPoint(context, width, 134);
+    CGContextStrokePath(context);
     
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-    [self drawBackImage];
-    CGRect refRect = [self drawOnceNode:context bottomRects:bottomRects];
-    
-    //--------------------------------------------------------------------------------------------------------------
     //add points
     CGContextSetLineWidth(context, kLineWidth);
     CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
@@ -139,133 +293,8 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导报价", @"最
     CGContextAddLineToPoint(context, CGRectGetMidX(refRect), 128);
     CGContextAddLineToPoint(context, CGRectGetMidX(refRect), CGRectGetMaxY(refRect));
     CGContextStrokePath(context);
-    
-    //--------------------------------------------------------------------------------------------------------------
-    //add top text
-    [self.lineColor set];
-    for (int i = 0; i < self.data.topDescriptions.count; i++) {
-        if (i >= 3) break;
-        
-        NSString *topText = self.data.topDescriptions[i];
-        CGRect rect = CGRectMake(0, 20, width/3., 10);
-        rect.origin.x = width/3. * i;
-        
-        [topText drawInRect:rect
-                   withFont:self.topTextFont
-              lineBreakMode:NSLineBreakByWordWrapping
-                  alignment:NSTextAlignmentCenter];
-    }
-    //add bottom text
-    [[UIColor blackColor] set];
-    for (int i = 0; i < self.data.bottomDescriptions.count; i++) {
-        if (i >= 3) break;
-        
-        NSString *bottomText = self.data.bottomDescriptions[i];
-        CGRect rect = bottomRects[i];
-        rect.size.height /= 2;
-        rect.origin.y += rect.size.height;
-        
-        [bottomText drawInRect:rect
-                      withFont:self.bottomTextFont
-                 lineBreakMode:NSLineBreakByWordWrapping
-                     alignment:NSTextAlignmentCenter];
-    }
-    //add ref text
-    if (self.data.referencePrice) {
-        [[UIColor blackColor] set];
-        CGRect refTextRect = refRect;
-        refTextRect.size.height *= 3./5.;
-        refTextRect.origin.y += refRect.size.height /5. * 2.;
-        [self.data.referencePrice drawInRect:refTextRect
-                                    withFont:[UIFont boldSystemFontOfSize:14]
-                               lineBreakMode:NSLineBreakByWordWrapping
-                                   alignment:NSTextAlignmentCenter];
-    }
 }
 
-/**
- *  绘制固定的元素
- *
- *  @param context     context
- *  @param bottonRects 下方的三个方框数组
- *
- *  @return 参考成交价的边框
- */
-- (CGRect)drawOnceNode:(CGContextRef)context bottomRects:(const CGRect *)bottonRects {
-    
-    float width = self.bounds.size.width;
-    float height = self.bounds.size.height;
-    CGRect refRect = CGRectInset(self.bounds, width/2.9, height/2.7);
-    
-    CGContextSaveGState(context);
-    
-    //add bottom rects -> 3
-    CGContextSetLineWidth(context, kLineWidth);
-    CGContextSetStrokeColorWithColor(context, self.lineColor.CGColor);
-    CGContextAddRects(context, bottonRects, 3);
-    CGContextStrokePath(context);
-    
-    //add x axis
-    CGContextSetLineWidth(context, 2);
-    CGContextSetStrokeColorWithColor(context, self.axisColor.CGColor);
-    CGContextMoveToPoint(context, 0, 134);
-    CGContextAddLineToPoint(context, width, 134);
-    CGContextStrokePath(context);
-    
-    //draw bottom title text
-    [[UIColor blackColor] set];
-    for (int i = 0; i < 3; i++) {
-        NSString *title = bottomTitles[i];
-        CGRect rect = bottonRects[i];
-        rect.size.height /= 2.0f;
-        
-        [title drawInRect:rect
-                 withFont:[UIFont boldSystemFontOfSize:self.bottomTextFont.pointSize]
-            lineBreakMode:NSLineBreakByWordWrapping
-                alignment:NSTextAlignmentCenter];
-    }
-    
-    //add ref rect
-    CGContextSetLineWidth(context, kLineWidth);
-    CGContextSetStrokeColorWithColor(context, self.refPointColor.CGColor);
-    CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-    CGContextAddRect(context, refRect);
-    CGContextDrawPath(context, kCGPathFillStroke);
-    
-    CGRect headRect = refRect;
-    headRect.size.height *= 2./5.;
-    CGContextSetFillColorWithColor(context, self.refPointColor.CGColor);
-    CGContextAddRect(context, headRect);
-    CGContextDrawPath(context, kCGPathFillStroke);
-    
-    [[UIColor whiteColor] set];
-    NSString *refTitle = @"参考成交价";
-    [refTitle drawInRect:headRect withFont:[UIFont boldSystemFontOfSize:14]
-           lineBreakMode:NSLineBreakByWordWrapping
-               alignment:NSTextAlignmentCenter];
-    
-    //add top title text
-    [self.lineColor set];
-    for (int i = 0; i < 3; i++) {
-        NSString *title = topTitles[i];
-        CGRect rect = CGRectMake(0, 5, width/3., 10);
-        rect.origin.x = width/3. * i;
-        
-        [title drawInRect:rect
-                 withFont:[UIFont boldSystemFontOfSize:self.topTextFont.pointSize]
-            lineBreakMode:NSLineBreakByWordWrapping
-                alignment:NSTextAlignmentCenter];
-    }
-    
-    CGContextRestoreGState(context);
-    return refRect;
-}
-
-- (void)drawBackImage {
-    if (!self.data.image) return;
-    
-    [self.data.image drawInRect:self.bounds];
-}
 
 @end
 
