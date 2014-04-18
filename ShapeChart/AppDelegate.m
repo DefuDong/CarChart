@@ -1,8 +1,8 @@
 //
 //  AppDelegate.m
-//  Chart
+//  ShapeChart
 //
-//  Created by dongdf on 14-4-16.
+//  Created by dongdf on 14-4-18.
 //  Copyright (c) 2014年 ___FULLUSERNAME___. All rights reserved.
 //
 
@@ -16,11 +16,11 @@
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     // Override point for customization after application launch.
     self.window.backgroundColor = [UIColor whiteColor];
+    
     self.window.rootViewController = [[ViewController alloc] init];
     
     [self.window makeKeyAndVisible];
     return YES;
 }
-
 
 @end

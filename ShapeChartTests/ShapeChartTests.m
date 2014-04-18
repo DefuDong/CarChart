@@ -1,18 +1,18 @@
 //
-//  ChartTests.m
-//  ChartTests
+//  ShapeChartTests.m
+//  ShapeChartTests
 //
-//  Created by dongdf on 14-4-16.
+//  Created by dongdf on 14-4-18.
 //  Copyright (c) 2014年 ___FULLUSERNAME___. All rights reserved.
 //
 
 #import <XCTest/XCTest.h>
 
-@interface ChartTests : XCTestCase
+@interface ShapeChartTests : XCTestCase
 
 @end
 
-@implementation ChartTests
+@implementation ShapeChartTests
 
 - (void)setUp
 {

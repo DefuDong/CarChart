@@ -10,7 +10,7 @@
 
 #define kLineWidth 1
 static NSString *topTitles[] = {@"风险", @"适宜", @"偏贵"};
-static NSString *bottomTitles[] = {@"最低报价", @"厂商指导报价", @"最高报价"};
+static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高报价"};
 
 @interface ChartView()
 {
