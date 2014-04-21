@@ -13,6 +13,16 @@
 
 @property (nonatomic, retain) ShapeChartData *data;
 
+/**
+ *  下载完图片后调用显示文字
+ */
+- (void)shouldShowText;
+
+/**
+ *  下载完图片后调用显示连线及坐标轴上的点
+ *
+ *  @param animated 动画
+ */
 - (void)showLineAnimated:(BOOL)animated;
 
 @end

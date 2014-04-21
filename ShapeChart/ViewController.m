@@ -41,6 +41,7 @@
 
 
 - (IBAction)buttonPressed:(id)sender {
+    [shapeView shouldShowText];
     [shapeView showLineAnimated:YES];
 }
 

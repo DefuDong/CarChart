@@ -8,7 +8,7 @@
 
 #import "ShapeChartView.h"
 
-#define kLineWidth 1
+#define kLineWidth .5
 static NSString *topTitles[] = {@"风险", @"适宜", @"偏贵"};
 static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高报价"};
 
@@ -18,17 +18,19 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     float height;
     
     CGRect bottomRects[3];
+    CGRect topRects[3];
     CGRect refRect;
+    float axisY;
     
     //\//\//
     BOOL _needDrawPoints;
+    BOOL _shouldShowText;
     
     CAShapeLayer *_refLineLayer;
     CAShapeLayer *_linesLayer;
 }
 
 @property (nonatomic, retain) UIColor *lineColor;
-@property (nonatomic, retain) UIColor *axisColor;
 @property (nonatomic, retain) UIColor *pointColor;
 @property (nonatomic, retain) UIColor *refPointColor;
 
@@ -50,7 +52,7 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
 
 
 #pragma mark -
-- (id)initWithFrame:(CGRect)frame {
+- (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
         [self perset];
@@ -72,24 +74,31 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     self.backgroundColor = [UIColor whiteColor];
     
     self.lineColor = [UIColor lightGrayColor];
-    self.axisColor = [UIColor blueColor];
-    self.pointColor = [UIColor blueColor];
-    self.refPointColor = [UIColor redColor];
+    self.pointColor = [UIColor colorWithRed:47./255. green:119./255. blue:179./255. alpha:1];
+    self.refPointColor = [UIColor colorWithRed:191./255. green:30./255. blue:29./255. alpha:1];
     
-    self.topTextFont = [UIFont systemFontOfSize:12];
+    self.topTextFont = [UIFont systemFontOfSize:10];
     self.bottomTextFont = [UIFont systemFontOfSize:11];
     
     _needDrawPoints = NO;
+    _shouldShowText = NO;
 }
 
 - (void)initialize {
     width = self.frame.size.width;
     height = self.frame.size.height;
     
-    bottomRects[0] = (CGRect){0,height-32.5,105,32};
-    bottomRects[1] = (CGRect){107.5,height-32.5,105,32};
-    bottomRects[2] = (CGRect){215,height-32.5,105,32};
-    refRect = CGRectInset(self.bounds, width/2.9, height/2.7);
+    bottomRects[0] = (CGRect){0, height-33, 105, 32};
+    bottomRects[1] = (CGRect){107.5, height-33, 105, 32};
+    bottomRects[2] = (CGRect){215, height-33, 105, 32};
+    
+    topRects[0] = CGRectMake(0, 8, 65, 26);
+    topRects[1] = CGRectMake(65, 8, 157, 26);
+    topRects[2] = CGRectMake(221, 8, 98, 26);
+    
+    refRect = CGRectMake(100, 77, 120, 33);
+    
+    axisY = 133.0f;
     
     _linesLayer = [CAShapeLayer layer];
     _linesLayer.frame = self.bounds;
@@ -113,20 +122,23 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     float maxX          = width * self.data.maxPricePercent;
     float referenceX    = width * self.data.referencePricePercent;
     float guideX        = width * self.data.guidePricePercent;
-
+    
+    float axisMidBottom = axisY + (bottomRects[0].origin.y - axisY)*.5;
+    float axisMidTop = axisY - (axisY - CGRectGetMaxY(refRect))*.5;
+    
     CGMutablePathRef linesPath = CGPathCreateMutable();
     CGPathMoveToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[0]), CGRectGetMinY(bottomRects[0]));
-    CGPathAddLineToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[0]), 142);
-    CGPathAddLineToPoint(linesPath, NULL, minX, 142);
-    CGPathAddLineToPoint(linesPath, NULL, minX, 134+3);
+    CGPathAddLineToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[0]), axisMidBottom);
+    CGPathAddLineToPoint(linesPath, NULL, minX, axisMidBottom);
+    CGPathAddLineToPoint(linesPath, NULL, minX, axisY+3);
     CGPathMoveToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[1]), CGRectGetMinY(bottomRects[1]));
-    CGPathAddLineToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[1]), 142);
-    CGPathAddLineToPoint(linesPath, NULL, guideX, 142);
-    CGPathAddLineToPoint(linesPath, NULL, guideX, 134+3);
+    CGPathAddLineToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[1]), axisMidBottom);
+    CGPathAddLineToPoint(linesPath, NULL, guideX, axisMidBottom);
+    CGPathAddLineToPoint(linesPath, NULL, guideX, axisY+3);
     CGPathMoveToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[2]), CGRectGetMinY(bottomRects[2]));
-    CGPathAddLineToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[2]), 142);
-    CGPathAddLineToPoint(linesPath, NULL, maxX, 142);
-    CGPathAddLineToPoint(linesPath, NULL, maxX, 134+3);
+    CGPathAddLineToPoint(linesPath, NULL, CGRectGetMidX(bottomRects[2]), axisMidBottom);
+    CGPathAddLineToPoint(linesPath, NULL, maxX, axisMidBottom);
+    CGPathAddLineToPoint(linesPath, NULL, maxX, axisY+3);
     _linesLayer.path = linesPath;
     CGPathRelease(linesPath);
     
@@ -134,36 +146,20 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
 //    CGPathMoveToPoint(refPath, NULL, CGRectGetMidX(refRect), CGRectGetMaxY(refRect));
 //    CGPathAddLineToPoint(refPath, NULL, CGRectGetMidX(refRect), 128);
 //    CGPathAddLineToPoint(refPath, NULL, referenceX, 128);
-//    CGPathAddLineToPoint(refPath, NULL, referenceX, 134-4);
+//    CGPathAddLineToPoint(refPath, NULL, referenceX, axisY-4);
 //    _refLineLayer.path = refPath;
 //    CGPathRelease(refPath);
     
     UIBezierPath *refPath = [UIBezierPath bezierPath];
     [refPath moveToPoint:CGPointMake(CGRectGetMidX(refRect), CGRectGetMaxY(refRect))];
-    [refPath addLineToPoint:CGPointMake(CGRectGetMidX(refRect), 128)];
-    [refPath addLineToPoint:CGPointMake(referenceX, 128)];
-    [refPath addLineToPoint:CGPointMake(referenceX, 134-4)];
+    [refPath addLineToPoint:CGPointMake(CGRectGetMidX(refRect), axisMidTop)];
+    [refPath addLineToPoint:CGPointMake(referenceX, axisMidTop)];
+    [refPath addLineToPoint:CGPointMake(referenceX, axisY-4)];
     _refLineLayer.path = refPath.CGPath;
-}
-
-- (void)showLineAnimated:(BOOL)animated {
-    __block ShapeChartView *wself = self;
-    
-    [CATransaction begin];
-    [CATransaction setAnimationDuration:1.5];
-    [CATransaction setDisableActions:!animated];
-    [CATransaction setCompletionBlock:^{
-        _needDrawPoints = YES;
-        [wself setNeedsDisplay];
-    }];
-    _linesLayer.strokeEnd = 1;
-    _refLineLayer.strokeEnd = 1;
-    [CATransaction commit];
 }
 
 - (void)dealloc {
     self.lineColor = nil;
-    self.axisColor = nil;
     self.pointColor = nil;
     self.refPointColor = nil;
     self.topTextFont = nil;
@@ -179,28 +175,21 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     
     CGContextRef context = UIGraphicsGetCurrentContext();
     
-    [self drawBackImage];
+    if (self.data.image) {
+        [self.data.image drawInRect:self.bounds];
+    }
     
-    [self drawTopText];
-    
-    [self drawBottomTextAndRects:context];
-    
-    [self drawRef:context];
-    
-    [self drawAxis:context];
+    if (_shouldShowText) {
+        [self drawTopText];
+        
+        [self drawBottomText:context];
+        
+        [self drawRefText:context];
+    }
     
     if (_needDrawPoints) {
         [self drawPoints:context];
     }
-}
-
-/**
- *  绘制背景图片
- */
-- (void)drawBackImage {
-    if (!self.data.image) return;
-    
-    [self.data.image drawInRect:self.bounds];
 }
 
 /**
@@ -212,8 +201,8 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     [self.lineColor set];
     for (int i = 0; i < 3; i++) {
         NSString *title = topTitles[i];
-        CGRect rect = CGRectMake(0, 5, width/3., 10);
-        rect.origin.x = width/3. * i;
+        CGRect rect = topRects[i];
+        rect.size.height /= 2.;
         
         [title drawInRect:rect
                  withFont:[UIFont boldSystemFontOfSize:self.topTextFont.pointSize]
@@ -226,8 +215,9 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
         if (i >= 3) break;
         
         NSString *topText = self.data.topDescriptions[i];
-        CGRect rect = CGRectMake(0, 20, width/3., 10);
-        rect.origin.x = width/3. * i;
+        CGRect rect = topRects[i];
+        rect.origin.y += rect.size.height*.5;
+        rect.size.height /= 2.;
         
         [topText drawInRect:rect
                    withFont:self.topTextFont
@@ -241,13 +231,7 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
  *
  *  @param context     context
  */
-- (void)drawBottomTextAndRects:(CGContextRef)context {
-    
-    //add bottom rects -> 3
-    CGContextSetLineWidth(context, kLineWidth);
-    CGContextSetStrokeColorWithColor(context, self.lineColor.CGColor);
-    CGContextAddRects(context, bottomRects, 3);
-    CGContextStrokePath(context);
+- (void)drawBottomText:(CGContextRef)context {
     
     //draw bottom title text
     [[UIColor blackColor] set];
@@ -283,46 +267,19 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
  *
  *  @param context context
  */
-- (void)drawRef:(CGContextRef)context {
-    //add ref rect
-    CGContextSetLineWidth(context, kLineWidth);
-    CGContextSetStrokeColorWithColor(context, self.refPointColor.CGColor);
-    CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-    CGContextAddRect(context, refRect);
-    CGContextDrawPath(context, kCGPathFillStroke);
+- (void)drawRefText:(CGContextRef)context {
     
-    CGRect headRect = refRect;
-    headRect.size.height *= 2./5.;
-    CGContextSetFillColorWithColor(context, self.refPointColor.CGColor);
-    CGContextAddRect(context, headRect);
-    CGContextDrawPath(context, kCGPathFillStroke);
-    
-    [[UIColor whiteColor] set];
-    NSString *refTitle = @"参考成交价";
-    [refTitle drawInRect:headRect withFont:[UIFont boldSystemFontOfSize:14]
-           lineBreakMode:NSLineBreakByWordWrapping
-               alignment:NSTextAlignmentCenter];
-    
+    CGRect rect = refRect;
+    rect.origin.y +=5;
+    rect.size.height -=5;
     //add ref text
     if (self.data.referencePrice) {
         [[UIColor blackColor] set];
-        CGRect refTextRect = refRect;
-        refTextRect.size.height *= 3./5.;
-        refTextRect.origin.y += refRect.size.height /5. * 2.;
-        [self.data.referencePrice drawInRect:refTextRect
-                                    withFont:[UIFont boldSystemFontOfSize:14]
+        [self.data.referencePrice drawInRect:rect
+                                    withFont:[UIFont systemFontOfSize:18]
                                lineBreakMode:NSLineBreakByWordWrapping
                                    alignment:NSTextAlignmentCenter];
     }
-}
-
-- (void)drawAxis:(CGContextRef)context {
-    //add x axis
-    CGContextSetLineWidth(context, 2);
-    CGContextSetStrokeColorWithColor(context, self.axisColor.CGColor);
-    CGContextMoveToPoint(context, 0, 134);
-    CGContextAddLineToPoint(context, width, 134);
-    CGContextStrokePath(context);
 }
 
 - (void)drawPoints:(CGContextRef)context {
@@ -335,47 +292,68 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     CGContextSetLineWidth(context, kLineWidth);
     CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
     CGContextSetFillColorWithColor(context, self.pointColor.CGColor);
-    CGContextAddArc(context, minX, 134, 3, 0, 2*M_PI, YES);
+    CGContextAddArc(context, minX, axisY, 3, 0, 2*M_PI, YES);
     CGContextDrawPath(context, kCGPathFillStroke);
-    CGContextAddArc(context, guideX, 134, 3, 0, 2*M_PI, YES);
+    CGContextAddArc(context, guideX, axisY, 3, 0, 2*M_PI, YES);
     CGContextDrawPath(context, kCGPathFillStroke);
-    CGContextAddArc(context, maxX, 134, 3, 0, 2*M_PI, YES);
+    CGContextAddArc(context, maxX, axisY, 3, 0, 2*M_PI, YES);
     CGContextDrawPath(context, kCGPathFillStroke);
     CGContextSetFillColorWithColor(context, self.refPointColor.CGColor);
-    CGContextAddArc(context, referenceX, 134, 4, 0, 2*M_PI, YES);
+    CGContextAddArc(context, referenceX, axisY, 4, 0, 2*M_PI, YES);
     CGContextDrawPath(context, kCGPathFillStroke);
     //
     //    //add line rect->point
     //    CGContextSetLineWidth(context, kLineWidth);
     //    CGContextSetStrokeColorWithColor(context, self.pointColor.CGColor);
     //
-    //    CGContextMoveToPoint(context, minX, 134+3);
-    //    CGContextAddLineToPoint(context, minX, 142);
-    //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[0]), 142);
+    //    CGContextMoveToPoint(context, minX, axisY+3);
+    //    CGContextAddLineToPoint(context, minX, axisMidBottom);
+    //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[0]), axisMidBottom);
     //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[0]), CGRectGetMinY(bottomRects[0]));
     //    CGContextStrokePath(context);
     //
-    //    CGContextMoveToPoint(context, guideX, 134+3);
-    //    CGContextAddLineToPoint(context, guideX, 142);
-    //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[1]), 142);
+    //    CGContextMoveToPoint(context, guideX, axisY+3);
+    //    CGContextAddLineToPoint(context, guideX, axisMidBottom);
+    //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[1]), axisMidBottom);
     //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[1]), CGRectGetMinY(bottomRects[1]));
     //    CGContextStrokePath(context);
     //
-    //    CGContextMoveToPoint(context, maxX, 134+3);
-    //    CGContextAddLineToPoint(context, maxX, 142);
-    //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[2]), 142);
+    //    CGContextMoveToPoint(context, maxX, axisY+3);
+    //    CGContextAddLineToPoint(context, maxX, axisMidBottom);
+    //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[2]), axisMidBottom);
     //    CGContextAddLineToPoint(context, CGRectGetMidX(bottomRects[2]), CGRectGetMinY(bottomRects[2]));
     //    CGContextStrokePath(context);
     //
     //    //ref line rect->point
     //    CGContextSetStrokeColorWithColor(context, self.refPointColor.CGColor);
-    //    CGContextMoveToPoint(context, referenceX, 134-4);
+    //    CGContextMoveToPoint(context, referenceX, axisY-4);
     //    CGContextAddLineToPoint(context, referenceX, 128);
     //    CGContextAddLineToPoint(context, CGRectGetMidX(refRect), 128);
     //    CGContextAddLineToPoint(context, CGRectGetMidX(refRect), CGRectGetMaxY(refRect));
     //    CGContextStrokePath(context);
 }
 
+
+#pragma mark - public
+- (void)showLineAnimated:(BOOL)animated {
+    __block ShapeChartView *wself = self;
+    
+    [CATransaction begin];
+    [CATransaction setAnimationDuration:1.5];
+    [CATransaction setDisableActions:!animated];
+    [CATransaction setCompletionBlock:^{
+        _needDrawPoints = YES;
+        [wself setNeedsDisplay];
+    }];
+    _linesLayer.strokeEnd = 1;
+    _refLineLayer.strokeEnd = 1;
+    [CATransaction commit];
+}
+
+- (void)shouldShowText {
+    _shouldShowText = YES;
+    [self setNeedsDisplay];
+}
 
 @end
 
@@ -416,7 +394,7 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
         self.bottomDescriptions = [NSArray arrayWithObjects:@"10.11万", @"12.63万", @"13.63万", nil];
         self.referencePrice = @"12.28万";
         
-        self.image = [UIImage imageNamed:@"111.png"];
+        self.image = [UIImage imageNamed:@"chart_back.png"];
     }
     return self;
 }
