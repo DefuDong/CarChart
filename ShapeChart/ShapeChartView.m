@@ -96,9 +96,9 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
     topRects[1] = CGRectMake(65, 8, 157, 26);
     topRects[2] = CGRectMake(221, 8, 98, 26);
     
-    refRect = CGRectMake(100, 77, 120, 33);
+    refRect = CGRectMake(100, 77, 120, 32);
     
-    axisY = 133.0f;
+    axisY = 132.5f;
     
     _linesLayer = [CAShapeLayer layer];
     _linesLayer.frame = self.bounds;
@@ -351,8 +351,10 @@ static NSString *bottomTitles[] = {@"最低报价", @"厂商指导价", @"最高
 }
 
 - (void)shouldShowText {
-    _shouldShowText = YES;
-    [self setNeedsDisplay];
+    if (!_shouldShowText) {
+        _shouldShowText = YES;
+        [self setNeedsDisplay];
+    }
 }
 
 @end

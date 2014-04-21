@@ -30,7 +30,7 @@
     [self.view addSubview:chartView];
     
     
-    shapeView = [[ShapeChartView alloc] initWithFrame:CGRectMake(0, 300, 320, 182)];
+    shapeView = [[ShapeChartView alloc] initWithFrame:CGRectMake(0, 300, 320, 181)];
     shapeView.data = [[ShapeChartData alloc] init];
     [self.view addSubview:shapeView];
 }
